@@ -47,8 +47,9 @@
   .sync-dot.live { background: #27ae60; }
   @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
   .content { flex: 1; padding: 20px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
-  .grocery-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .grocery-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
   .grocery-title { font-size: 22px; font-weight: 700; }
+  .grocery-actions { display: flex; gap: 8px; align-items: center; }
   .section-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; box-shadow: var(--shadow); }
   .section-header { padding: 14px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
   .section-emoji { font-size: 20px; }
@@ -82,6 +83,34 @@
   .coming-soon-icon { font-size: 48px; margin-bottom: 16px; }
   .coming-soon h3 { font-size: 18px; color: var(--text); margin-bottom: 8px; }
   .coming-soon p { font-family: sans-serif; color: var(--text3); font-size: 14px; }
+
+  /* Staples tab styles */
+  .staples-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .staples-title { font-size: 22px; font-weight: 700; }
+  .staples-subtitle { font-family: sans-serif; font-size: 13px; color: var(--text3); margin-bottom: 20px; }
+  .staples-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+  .staple-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  .staple-row:last-child { border-bottom: none; }
+  .staple-row:hover { background: var(--surface2); }
+  .staple-section-badge { font-family: sans-serif; font-size: 11px; color: var(--text3); background: var(--surface2); border: 1px solid var(--border); padding: 2px 8px; border-radius: 10px; white-space: nowrap; flex-shrink: 0; }
+  .staple-name { flex: 1; font-family: sans-serif; font-size: 15px; color: var(--text); }
+  .add-staple-form { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .add-staple-input { flex: 1; min-width: 120px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 15px; font-family: sans-serif; outline: none; }
+  .add-staple-input:focus { border-color: var(--accent); }
+  .add-staple-select { padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 14px; font-family: sans-serif; outline: none; cursor: pointer; min-width: 120px; }
+  .add-staple-select:focus { border-color: var(--accent); }
+  .staples-empty { padding: 40px 20px; text-align: center; font-family: sans-serif; color: var(--text3); font-size: 14px; }
+
+  /* Add staples modal */
+  .staples-preview-list { max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 16px; }
+  .staples-preview-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); font-family: sans-serif; font-size: 14px; cursor: pointer; transition: background 0.15s; }
+  .staples-preview-row:last-child { border-bottom: none; }
+  .staples-preview-row:hover { background: var(--surface2); }
+  .staple-check { width: 20px; height: 20px; border: 2px solid var(--border); border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .staple-check.on { background: var(--accent); border-color: var(--accent); }
+  .staple-check.on::after { content: '✓'; color: white; font-size: 11px; }
+  .modal-note { font-family: sans-serif; font-size: 12px; color: var(--text3); margin-bottom: 12px; }
+  .staples-group-header { padding: 6px 14px 4px; font-family: sans-serif; font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; background: var(--surface2); border-bottom: 1px solid var(--border); }
 </style>
 </head>
 <body>
@@ -103,6 +132,26 @@ const DEFAULT_SECTIONS = [
   { id: 's5', name: 'Freezer', emoji: '❄️', open: false },
   { id: 's6', name: 'Snacks',  emoji: '🍿', open: false },
 ];
+const DEFAULT_STAPLES = [
+  { id: 'st1',  name: 'Bananas',        sectionId: 's2' },
+  { id: 'st2',  name: 'Strawberries',   sectionId: 's2' },
+  { id: 'st3',  name: 'Blueberries',    sectionId: 's2' },
+  { id: 'st4',  name: 'Kale',           sectionId: 's2' },
+  { id: 'st5',  name: 'Peppers',        sectionId: 's2' },
+  { id: 'st6',  name: 'Bread',          sectionId: 's1' },
+  { id: 'st7',  name: 'Bagels',         sectionId: 's1' },
+  { id: 'st8',  name: 'Protein Shakes', sectionId: 's1' },
+  { id: 'st9',  name: 'Beer',           sectionId: 's1' },
+  { id: 'st10', name: 'Wine',           sectionId: 's1' },
+  { id: 'st11', name: 'Juice Boxes',    sectionId: 's1' },
+  { id: 'st12', name: 'Chicken',        sectionId: 's4' },
+  { id: 'st13', name: 'Ground Beef',    sectionId: 's4' },
+  { id: 'st14', name: 'Pork Loin',      sectionId: 's4' },
+  { id: 'st15', name: 'Dino Nuggets',   sectionId: 's5' },
+  { id: 'st16', name: 'Waffles',        sectionId: 's5' },
+  { id: 'st17', name: 'Bel Vitas',      sectionId: 's6' },
+  { id: 'st18', name: 'Popcorn',        sectionId: 's6' },
+];
 const SECTION_EMOJIS = ['🛒','🥦','🧀','🥩','❄️','🍿','🥐','🥛','🍎','🧴','🍷','☕','🧹','💊','🐾'];
 const TABS = [
   { id: 'grocery',  label: '🛒 Groceries' },
@@ -110,10 +159,10 @@ const TABS = [
   { id: 'tasks',    label: '✅ Tasks' },
   { id: 'calendar', label: '📅 Calendar' },
   { id: 'notes',    label: '📝 Notes' },
+  { id: 'staples',  label: '📋 Staples', hidden: true },
 ];
 function genId() { return Math.random().toString(36).slice(2,9); }
 
-// ── STORAGE: localStorage for standalone, window.storage if in Claude ────────
 const Store = {
   async get(key) {
     if (window.storage) {
@@ -140,6 +189,8 @@ const S = {
   btnItemDel: { background:'none', border:'none', color:'#bbb', cursor:'pointer', fontSize:'20px', padding:'0 4px', lineHeight:'1', outline:'none', flexShrink:0, WebkitAppearance:'none' },
   btnAddItem: { padding:'10px 18px', background:'#c85a2a', color:'#ffffff', border:'none', borderRadius:'8px', fontFamily:'sans-serif', fontSize:'15px', fontWeight:'600', cursor:'pointer', outline:'none', flexShrink:0, WebkitAppearance:'none' },
   btnClear: { fontFamily:'sans-serif', fontSize:'12px', color:'#888', background:'#f0ede8', border:'1px solid rgba(0,0,0,0.12)', borderRadius:'4px', cursor:'pointer', padding:'3px 10px', outline:'none', WebkitAppearance:'none' },
+  btnStaples: { display:'inline-flex', alignItems:'center', justifyContent:'center', gap:'5px', padding:'10px 14px', background:'#f0ede8', color:'#c85a2a', border:'1px solid #d4845a', borderRadius:'8px', fontFamily:'sans-serif', fontSize:'13px', fontWeight:'600', cursor:'pointer', outline:'none', whiteSpace:'nowrap', WebkitAppearance:'none' },
+  btnStaplesLink: { background:'none', border:'none', fontFamily:'sans-serif', fontSize:'12px', color:'#888', cursor:'pointer', padding:'0', textDecoration:'underline', outline:'none', WebkitAppearance:'none' },
 };
 
 function App() {
@@ -151,7 +202,10 @@ function App() {
   const [tab, setTab] = useState('grocery');
   const [sections, setSections] = useState(DEFAULT_SECTIONS);
   const [items, setItems] = useState({});
+  const [staples, setStaples] = useState(DEFAULT_STAPLES);
   const [showAddSection, setShowAddSection] = useState(false);
+  const [showAddStaples, setShowAddStaples] = useState(false);
+  const [showClearAll, setShowClearAll] = useState(false);
   const [newSection, setNewSection] = useState({ name: '', emoji: '🛒' });
   const [syncStatus, setSyncStatus] = useState('idle');
   const [syncTime, setSyncTime] = useState(null);
@@ -162,12 +216,12 @@ function App() {
 
   useEffect(() => { document.documentElement.setAttribute('data-theme', theme); }, [theme]);
 
-  const saveData = useCallback(async (secs, its) => {
+  const saveData = useCallback(async (secs, its, stps) => {
     isSaving.current = true;
     setSyncStatus('saving');
     const ts = Date.now();
     lastSaveTs.current = ts;
-    await Store.set('grocery_data', { sections: secs, items: its, ts });
+    await Store.set('grocery_data', { sections: secs, items: its, staples: stps, ts });
     isSaving.current = false;
     setSyncStatus('live');
     setSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
@@ -179,6 +233,7 @@ function App() {
     if (!d || d.ts <= lastSaveTs.current) return;
     setSections(d.sections || DEFAULT_SECTIONS);
     setItems(d.items || {});
+    setStaples(d.staples || DEFAULT_STAPLES);
     lastSaveTs.current = d.ts;
     setSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     setSyncStatus('live');
@@ -188,14 +243,25 @@ function App() {
     if (!user) return;
     (async () => {
       const d = await Store.get('grocery_data');
-      if (d) { setSections(d.sections || DEFAULT_SECTIONS); setItems(d.items || {}); lastSaveTs.current = d.ts || 0; setSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })); }
+      if (d) {
+        setSections(d.sections || DEFAULT_SECTIONS);
+        setItems(d.items || {});
+        setStaples(d.staples || DEFAULT_STAPLES);
+        lastSaveTs.current = d.ts || 0;
+        setSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      }
       setSyncStatus('live');
     })();
     syncInterval.current = setInterval(loadData, 12000);
     return () => clearInterval(syncInterval.current);
   }, [user, loadData]);
 
-  function update(s, i) { setSections(s); setItems(i); saveData(s, i); }
+  function update(s, i, stps) {
+    const st = stps !== undefined ? stps : staples;
+    setSections(s); setItems(i); setStaples(st);
+    saveData(s, i, st);
+  }
+
   function login() {
     if (!selUser) { setAuthErr('Please select who you are.'); return; }
     if (pin !== USERS[selUser].pin) { setAuthErr('Incorrect PIN. Try again.'); return; }
@@ -213,6 +279,32 @@ function App() {
   function toggleItem(sId, iId) { update(sections, { ...items, [sId]: (items[sId]||[]).map(i => i.id===iId ? {...i,checked:!i.checked} : i) }); }
   function deleteItem(sId, iId) { update(sections, { ...items, [sId]: (items[sId]||[]).filter(i => i.id!==iId) }); }
   function clearChecked(sId) { update(sections, { ...items, [sId]: (items[sId]||[]).filter(i => !i.checked) }); }
+  function clearAllItems() { update(sections, {}); }
+
+  // Staples management
+  function addStaple(name, sectionId) {
+    if (!name.trim()) return;
+    const newStaples = [...staples, { id: genId(), name: name.trim(), sectionId }];
+    update(sections, items, newStaples);
+  }
+  function deleteStaple(id) {
+    update(sections, items, staples.filter(s => s.id !== id));
+  }
+
+  // Add staples to grocery list — only staples whose item doesn't already exist (unchecked) in that section
+  function addStaplesToList(selectedIds) {
+    const selected = staples.filter(s => selectedIds.includes(s.id));
+    let newItems = { ...items };
+    selected.forEach(staple => {
+      const sectionItems = newItems[staple.sectionId] || [];
+      const alreadyExists = sectionItems.some(i => !i.checked && i.text.toLowerCase() === staple.name.toLowerCase());
+      if (!alreadyExists) {
+        newItems[staple.sectionId] = [...sectionItems, { id: genId(), text: staple.name, checked: false }];
+      }
+    });
+    update(sections, newItems);
+    setShowAddStaples(false);
+  }
 
   if (!user) return React.createElement('div', { className:'auth-screen' },
     React.createElement('div', { className:'auth-card' },
@@ -233,6 +325,8 @@ function App() {
     )
   );
 
+  const visibleTabs = TABS.filter(t => !t.hidden || t.id === tab);
+
   return React.createElement('div', { className:'app' },
     React.createElement('div', { className:'topbar' },
       React.createElement('div', { className:'topbar-title' }, '🏠 Home'),
@@ -243,7 +337,7 @@ function App() {
       )
     ),
     React.createElement('div', { className:'tab-bar' },
-      TABS.map(t => React.createElement('div', { key:t.id, className:`tab${tab===t.id?' active':''}`, onClick:()=>setTab(t.id) }, t.label))
+      visibleTabs.map(t => React.createElement('div', { key:t.id, className:`tab${tab===t.id?' active':''}`, onClick:()=>setTab(t.id) }, t.label))
     ),
     React.createElement('div', { className:'sync-bar' },
       React.createElement('div', { className:`sync-dot ${syncStatus==='saving'?'saving':'live'}` }),
@@ -251,12 +345,26 @@ function App() {
     ),
     React.createElement('div', { className:'content' },
       tab==='grocery'
-        ? React.createElement(GroceryTab, { sections, items, onToggleSection:toggleSection, onDeleteSection:deleteSection, onAddSection:()=>setShowAddSection(true), onAddItem:addItem, onToggleItem:toggleItem, onDeleteItem:deleteItem, onClearChecked:clearChecked })
-        : React.createElement('div', { className:'coming-soon' },
-            React.createElement('div', { className:'coming-soon-icon' }, TABS.find(t=>t.id===tab)?.label.split(' ')[0]),
-            React.createElement('h3', null, TABS.find(t=>t.id===tab)?.label.replace(/^[^ ]+ /,'')),
-            React.createElement('p', null, 'Coming soon!')
-          )
+        ? React.createElement(GroceryTab, {
+            sections, items, staples,
+            onToggleSection:toggleSection, onDeleteSection:deleteSection,
+            onAddSection:()=>setShowAddSection(true),
+            onAddItem:addItem, onToggleItem:toggleItem, onDeleteItem:deleteItem, onClearChecked:clearChecked,
+            onAddStaples:()=>setShowAddStaples(true),
+            onGoToStaples:()=>setTab('staples'),
+            onClearAll:()=>setShowClearAll(true),
+          })
+        : tab==='staples'
+          ? React.createElement(StaplesTab, {
+              sections, staples,
+              onAddStaple:addStaple, onDeleteStaple:deleteStaple,
+              onBack:()=>setTab('grocery'),
+            })
+          : React.createElement('div', { className:'coming-soon' },
+              React.createElement('div', { className:'coming-soon-icon' }, TABS.find(t=>t.id===tab)?.label.split(' ')[0]),
+              React.createElement('h3', null, TABS.find(t=>t.id===tab)?.label.replace(/^[^ ]+ /,'')),
+              React.createElement('p', null, 'Coming soon!')
+            )
     ),
     showAddSection && React.createElement('div', { className:'modal-overlay', onClick:e=>e.target.className==='modal-overlay'&&setShowAddSection(false) },
       React.createElement('div', { className:'modal' },
@@ -271,15 +379,108 @@ function App() {
           React.createElement('button', { style:S.btnPrimary, onClick:addSection }, 'Add Section')
         )
       )
+    ),
+    showAddStaples && React.createElement(AddStaplesModal, {
+      sections, items, staples,
+      onConfirm: addStaplesToList,
+      onClose: ()=>setShowAddStaples(false),
+    }),
+    showClearAll && React.createElement('div', { className:'modal-overlay', onClick:e=>e.target.className==='modal-overlay'&&setShowClearAll(false) },
+      React.createElement('div', { className:'modal' },
+        React.createElement('h3', null, '🗑️ Clear Entire List?'),
+        React.createElement('p', { style:{fontFamily:'sans-serif',fontSize:14,color:'var(--text2)',marginBottom:24,lineHeight:1.5} },
+          'This removes every item from every section and starts fresh. Your sections and staples are not affected.'
+        ),
+        React.createElement('div', { className:'modal-actions' },
+          React.createElement('button', { style:S.btnSecondary, onClick:()=>setShowClearAll(false) }, 'Cancel'),
+          React.createElement('button', { style:{...S.btnPrimary, background:'#c0392b'}, onClick:()=>{ clearAllItems(); setShowClearAll(false); } }, 'Yes, clear everything')
+        )
+      )
     )
   );
 }
 
-function GroceryTab({ sections, items, onToggleSection, onDeleteSection, onAddSection, onAddItem, onToggleItem, onDeleteItem, onClearChecked }) {
+function AddStaplesModal({ sections, items, staples, onConfirm, onClose }) {
+  // Pre-select staples not already on the list (unchecked)
+  const initialSelected = staples
+    .filter(staple => {
+      const sectionItems = items[staple.sectionId] || [];
+      return !sectionItems.some(i => !i.checked && i.text.toLowerCase() === staple.name.toLowerCase());
+    })
+    .map(s => s.id);
+
+  const [selected, setSelected] = useState(initialSelected);
+
+  function toggle(id) {
+    setSelected(sel => sel.includes(id) ? sel.filter(s=>s!==id) : [...sel, id]);
+  }
+
+  // Group staples by section
+  const grouped = sections
+    .map(sec => ({ sec, stps: staples.filter(s => s.sectionId === sec.id) }))
+    .filter(g => g.stps.length > 0);
+
+  const allIds = staples.map(s => s.id);
+  const allSelected = allIds.every(id => selected.includes(id));
+
+  return React.createElement('div', { className:'modal-overlay', onClick:e=>e.target.className==='modal-overlay'&&onClose() },
+    React.createElement('div', { className:'modal' },
+      React.createElement('h3', null, '📋 Add Staples to List'),
+      staples.length === 0
+        ? React.createElement('div', { style:{fontFamily:'sans-serif',fontSize:14,color:'var(--text3)',textAlign:'center',padding:'24px 0',marginBottom:16} },
+            "No staples yet. Add some from the Staples tab first."
+          )
+        : React.createElement(React.Fragment, null,
+            React.createElement('div', { className:'modal-note' },
+              `${selected.length} of ${staples.length} selected — items already on your list are pre-deselected.`
+            ),
+            React.createElement('div', { style:{display:'flex',justifyContent:'flex-end',marginBottom:8} },
+              React.createElement('button', { style:S.btnClear, onClick:()=>setSelected(allSelected ? [] : allIds) },
+                allSelected ? 'Deselect all' : 'Select all'
+              )
+            ),
+            React.createElement('div', { className:'staples-preview-list' },
+              grouped.map(({ sec, stps }) =>
+                React.createElement(React.Fragment, { key:sec.id },
+                  React.createElement('div', { className:'staples-group-header' }, `${sec.emoji} ${sec.name}`),
+                  stps.map(staple => {
+                    const on = selected.includes(staple.id);
+                    const alreadyOnList = (items[staple.sectionId]||[]).some(i => !i.checked && i.text.toLowerCase() === staple.name.toLowerCase());
+                    return React.createElement('div', { key:staple.id, className:'staples-preview-row', onClick:()=>toggle(staple.id) },
+                      React.createElement('div', { className:`staple-check${on?' on':''}` }),
+                      React.createElement('span', { style:{flex:1} }, staple.name),
+                      alreadyOnList && React.createElement('span', { style:{fontFamily:'sans-serif',fontSize:11,color:'var(--text3)'} }, '✓ on list')
+                    );
+                  })
+                )
+              )
+            )
+          ),
+      React.createElement('div', { className:'modal-actions' },
+        React.createElement('button', { style:S.btnSecondary, onClick:onClose }, 'Cancel'),
+        React.createElement('button', { style:S.btnPrimary, onClick:()=>onConfirm(selected), disabled:selected.length===0 },
+          selected.length > 0 ? `Add ${selected.length} item${selected.length===1?'':'s'}` : 'Add to List'
+        )
+      )
+    )
+  );
+}
+
+function GroceryTab({ sections, items, staples, onToggleSection, onDeleteSection, onAddSection, onAddItem, onToggleItem, onDeleteItem, onClearChecked, onAddStaples, onGoToStaples, onClearAll }) {
   return React.createElement('div', null,
     React.createElement('div', { className:'grocery-header' },
       React.createElement('div', { className:'grocery-title' }, 'Grocery List'),
-      React.createElement('button', { style:S.btnPrimary, onClick:onAddSection }, '＋ Section')
+      React.createElement('div', { className:'grocery-actions' },
+        React.createElement('button', { style:S.btnStaples, onClick:onAddStaples }, '📋 Add Staples'),
+        React.createElement('button', { style:S.btnPrimary, onClick:onAddSection }, '＋ Section'),
+        React.createElement('button', { style:{...S.btnIcon, color:'#c0392b', fontSize:'16px'}, title:'Clear all items', onClick:onClearAll }, '🗑️')
+      )
+    ),
+    React.createElement('div', { style:{marginBottom:16,display:'flex',alignItems:'center',gap:6} },
+      React.createElement('span', { style:{fontFamily:'sans-serif',fontSize:12,color:'var(--text3)'} },
+        `${staples.length} staple${staples.length===1?'':'s'} saved ·`
+      ),
+      React.createElement('button', { style:S.btnStaplesLink, onClick:onGoToStaples }, 'Edit staples list')
     ),
     sections.map(s => React.createElement(SectionCard, {
       key:s.id, section:s,
@@ -289,6 +490,80 @@ function GroceryTab({ sections, items, onToggleSection, onDeleteSection, onAddSe
       onAddItem:t=>onAddItem(s.id,t), onToggleItem:id=>onToggleItem(s.id,id),
       onDeleteItem:id=>onDeleteItem(s.id,id), onClearChecked:()=>onClearChecked(s.id)
     }))
+  );
+}
+
+function StaplesTab({ sections, staples, onAddStaple, onDeleteStaple, onBack }) {
+  const [name, setName] = useState('');
+  const [sectionId, setSectionId] = useState(sections[0]?.id || '');
+  const inputRef = useRef(null);
+
+  function submit() {
+    if (!name.trim() || !sectionId) return;
+    onAddStaple(name.trim(), sectionId);
+    setName('');
+    setTimeout(() => inputRef.current && inputRef.current.focus(), 0);
+  }
+
+  // Group by section
+  const grouped = sections
+    .map(sec => ({ sec, stps: staples.filter(s => s.sectionId === sec.id) }))
+    .filter(g => g.stps.length > 0);
+
+  return React.createElement('div', null,
+    React.createElement('div', { className:'staples-header' },
+      React.createElement('div', { className:'staples-title' }, '📋 Staples'),
+      React.createElement('button', { style:{...S.btnSecondary, fontSize:'13px', padding:'8px 14px'}, onClick:onBack }, '← Groceries')
+    ),
+    React.createElement('div', { className:'staples-subtitle' },
+      'Your regular items. Hit "Add Staples" on the grocery tab to drop them all onto your list in one tap.'
+    ),
+    staples.length === 0
+      ? React.createElement('div', { className:'staples-empty' },
+          React.createElement('div', { style:{fontSize:36,marginBottom:12} }, '📋'),
+          'No staples yet — add your regulars below.'
+        )
+      : React.createElement('div', { className:'staples-card', style:{marginBottom:20} },
+          grouped.map(({ sec, stps }) =>
+            React.createElement(React.Fragment, { key:sec.id },
+              React.createElement('div', { className:'staples-group-header', style:{fontSize:12,padding:'8px 16px'} },
+                `${sec.emoji} ${sec.name}`
+              ),
+              stps.map(staple =>
+                React.createElement('div', { key:staple.id, className:'staple-row' },
+                  React.createElement('div', { className:'staple-name' }, staple.name),
+                  React.createElement('div', { className:'staple-section-badge' },
+                    `${sec.emoji} ${sec.name}`
+                  ),
+                  React.createElement('button', { style:S.btnItemDel, onClick:()=>onDeleteStaple(staple.id) }, '×')
+                )
+              )
+            )
+          )
+        ),
+    React.createElement('div', { style:{fontFamily:'sans-serif',fontSize:12,fontWeight:600,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'0.8px',marginBottom:10} },
+      'Add a staple'
+    ),
+    React.createElement('div', { className:'add-staple-form' },
+      React.createElement('input', {
+        ref: inputRef,
+        className:'add-staple-input',
+        placeholder:'Item name…',
+        value:name,
+        onChange:e=>setName(e.target.value),
+        onKeyDown:e=>e.key==='Enter'&&submit()
+      }),
+      React.createElement('select', {
+        className:'add-staple-select',
+        value:sectionId,
+        onChange:e=>setSectionId(e.target.value)
+      },
+        sections.map(sec =>
+          React.createElement('option', { key:sec.id, value:sec.id }, `${sec.emoji} ${sec.name}`)
+        )
+      ),
+      React.createElement('button', { style:S.btnPrimary, onClick:submit }, 'Add')
+    )
   );
 }
 

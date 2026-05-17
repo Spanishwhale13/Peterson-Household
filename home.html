@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Home">
+<link rel="apple-touch-icon" href="icon.png">
 <title>Home</title>
 <style>
   :root {
@@ -269,10 +270,7 @@ function App() {
   }
   function logout() { clearInterval(syncInterval.current); setUser(null); setSelUser(null); setPin(''); setAuthErr(''); setSyncStatus('idle'); }
   function toggleSection(id) { update(sections.map(s => s.id===id ? {...s,open:!s.open} : s), items); }
-  function deleteSection(id) {
-    if (staples.some(staple => staple.sectionId === id)) return;
-    const ni={...items}; delete ni[id]; update(sections.filter(s=>s.id!==id), ni);
-  }
+  function deleteSection(id) { const ni={...items}; delete ni[id]; update(sections.filter(s=>s.id!==id), ni); }
   function addSection() {
     if (!newSection.name.trim()) return;
     update([...sections, { id: genId(), name: newSection.name.trim(), emoji: newSection.emoji, open: true }], items);
@@ -485,17 +483,15 @@ function GroceryTab({ sections, items, staples, onToggleSection, onDeleteSection
       ),
       React.createElement('button', { style:S.btnStaplesLink, onClick:onGoToStaples }, 'Edit staples list')
     ),
-    sections.map(s => {
-      const hasStaples = staples.some(staple => staple.sectionId === s.id);
-      return React.createElement(SectionCard, {
-        key:s.id, section:s,
-        unchecked:(items[s.id]||[]).filter(i=>!i.checked),
-        checked:(items[s.id]||[]).filter(i=>i.checked),
-        onToggle:()=>onToggleSection(s.id), onDelete:()=>onDeleteSection(s.id),
-        canDelete: !hasStaples,
-        onAddItem:t=>onAddItem(s.id,t), onToggleItem:id=>onToggleItem(s.id,id), onDeleteItem:id=>onDeleteItem(s.id,id), onClearChecked:()=>onClearChecked(s.id)
-      });
-    })
+    sections.map(s => React.createElement(SectionCard, {
+      key:s.id, section:s,
+      unchecked:(items[s.id]||[]).filter(i=>!i.checked),
+      checked:(items[s.id]||[]).filter(i=>i.checked),
+      canDelete: !staples.some(st => st.sectionId === s.id),
+      onToggle:()=>onToggleSection(s.id), onDelete:()=>onDeleteSection(s.id),
+      onAddItem:t=>onAddItem(s.id,t), onToggleItem:id=>onToggleItem(s.id,id),
+      onDeleteItem:id=>onDeleteItem(s.id,id), onClearChecked:()=>onClearChecked(s.id)
+    }))
   );
 }
 
@@ -573,7 +569,7 @@ function StaplesTab({ sections, staples, onAddStaple, onDeleteStaple, onBack }) 
   );
 }
 
-function SectionCard({ section, unchecked, checked, onToggle, onDelete, onAddItem, onToggleItem, onDeleteItem, onClearChecked, canDelete=true }) {
+function SectionCard({ section, unchecked, checked, canDelete, onToggle, onDelete, onAddItem, onToggleItem, onDeleteItem, onClearChecked }) {
   const [val, setVal] = useState('');
   const inputRef = useRef(null);
   const total = unchecked.length + checked.length;
@@ -583,9 +579,7 @@ function SectionCard({ section, unchecked, checked, onToggle, onDelete, onAddIte
       React.createElement('div', { className:'section-emoji' }, section.emoji),
       React.createElement('div', { className:'section-name' }, section.name),
       total>0 && React.createElement('div', { className:'section-count' }, `${unchecked.length}/${total}`),
-      canDelete
-        ? React.createElement('button', { style:S.btnSectionDel, onClick:e=>{e.stopPropagation();onDelete();} }, '✕')
-        : React.createElement('div', { style:{ width:28, height:28, borderRadius:6, background:'#fafafa', border:'1px solid rgba(0,0,0,0.08)', color:'#bbb', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, cursor:'default' }, title:'Cannot delete section while it contains staples' }, '✕'),
+      canDelete && React.createElement('button', { style:S.btnSectionDel, onClick:e=>{e.stopPropagation();onDelete();} }, '✕'),
       React.createElement('div', { className:`section-toggle${section.open?' open':''}` }, '▾')
     ),
     section.open && React.createElement('div', { className:'section-body' },

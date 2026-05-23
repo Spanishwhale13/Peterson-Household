@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Home">
+<link rel="apple-touch-icon" href="icon.png">
+<title>Home</title>
+<style>
+  :root {
+    --bg: #f7f5f0; --surface: #ffffff; --surface2: #f0ede8;
+    --border: rgba(0,0,0,0.15); --text: #1a1a1a; --text2: #555; --text3: #888;
+    --accent: #c85a2a; --accent-light: #fdf0eb; --accent-border: #d4845a;
+    --success: #2d7a3a; --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --radius: 12px; --radius-sm: 8px;
+  }
+  [data-theme="dark"] {
+    --bg: #1a1814; --surface: #252220; --surface2: #302d2a;
+    --border: rgba(255,255,255,0.15); --text: #f0ede8; --text2: #b0a898; --text3: #7a7268;
+    --accent: #e07050; --accent-light: #2a1e18; --accent-border: #9a5030;
+    --shadow: 0 2px 12px rgba(0,0,0,0.3);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: Georgia, serif; background: var(--bg); color: var(--text); min-height: 100vh; min-height: -webkit-fill-available; transition: background 0.3s, color 0.3s; }
+  .auth-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .auth-card { background: var(--surface); border-radius: var(--radius); padding: 40px 32px; width: 100%; max-width: 380px; box-shadow: var(--shadow); border: 1px solid var(--border); }
+  .auth-logo { font-size: 28px; font-weight: 700; color: var(--accent); text-align: center; margin-bottom: 4px; }
+  .auth-sub { color: var(--text3); text-align: center; font-size: 14px; font-family: sans-serif; margin-bottom: 32px; }
+  .auth-label { font-family: sans-serif; font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; display: block; }
+  .auth-input { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); color: var(--text); font-size: 16px; font-family: sans-serif; outline: none; transition: border-color 0.2s; margin-bottom: 16px; }
+  .auth-input:focus { border-color: var(--accent); }
+  .user-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; }
+  .auth-err { color: #c0392b; font-size: 13px; font-family: sans-serif; text-align: center; margin-top: 12px; }
+  .app { display: flex; flex-direction: column; min-height: 100vh; max-width: 680px; margin: 0 auto; }
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 20px; padding-top: max(14px, env(safe-area-inset-top)); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .topbar-title { font-size: 20px; font-weight: 700; color: var(--accent); }
+  .topbar-right { display: flex; align-items: center; gap: 8px; }
+  .user-pill { font-family: sans-serif; font-size: 12px; background: var(--accent-light); color: var(--accent); border: 1px solid var(--accent-border); padding: 4px 10px; border-radius: 20px; }
+  .tab-bar { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; overflow-x: auto; }
+  .tab-bar::-webkit-scrollbar { display: none; }
+  .tab { padding: 13px 18px; font-family: sans-serif; font-size: 13px; font-weight: 500; color: var(--text3); border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; transition: all 0.2s; flex-shrink: 0; }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .sync-bar { display: flex; align-items: center; padding: 6px 16px; background: var(--surface2); font-family: sans-serif; font-size: 11px; color: var(--text3); border-bottom: 1px solid var(--border); gap: 6px; }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .sync-dot.saving { background: #e67e22; animation: blink 1s infinite; }
+  .sync-dot.live { background: #27ae60; }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
+  .content { flex: 1; padding: 20px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+  .grocery-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .grocery-title { font-size: 22px; font-weight: 700; }
+  .grocery-actions { display: flex; gap: 8px; align-items: center; }
+  .section-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; box-shadow: var(--shadow); }
+  .section-header { padding: 14px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  .section-emoji { font-size: 20px; }
+  .section-name { font-size: 15px; font-weight: 600; flex: 1; color: var(--text); }
+  .section-count { font-family: sans-serif; font-size: 12px; color: var(--text3); }
+  .section-toggle { font-size: 16px; color: var(--text3); transition: transform 0.2s; line-height: 1; }
+  .section-toggle.open { transform: rotate(180deg); }
+  .section-body { border-top: 1px solid var(--border); padding: 6px 0; }
+  .item-row { display: flex; align-items: center; gap: 12px; padding: 11px 16px; transition: background 0.15s; }
+  .item-row:hover { background: var(--surface2); }
+  .item-checkbox { width: 24px; height: 24px; border: 2px solid var(--border); border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; background: var(--surface); }
+  .item-checkbox.checked { background: var(--success); border-color: var(--success); }
+  .item-checkbox.checked::after { content: '✓'; color: white; font-size: 13px; font-family: sans-serif; }
+  .item-text { flex: 1; font-family: sans-serif; font-size: 15px; color: var(--text); }
+  .item-text.checked { text-decoration: line-through; color: var(--text3); }
+  .add-item-row { display: flex; gap: 8px; padding: 8px 16px 12px; }
+  .add-item-input { flex: 1; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); color: var(--text); font-size: 15px; font-family: sans-serif; outline: none; }
+  .add-item-input:focus { border-color: var(--accent); }
+  .checked-divider { padding: 8px 16px 4px; font-family: sans-serif; font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; display: flex; justify-content: space-between; align-items: center; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
+  @media (min-width: 500px) { .modal-overlay { align-items: center; } }
+  .modal { background: var(--surface); border-radius: var(--radius) var(--radius) 0 0; padding: 28px 24px; padding-bottom: max(28px, env(safe-area-inset-bottom)); width: 100%; max-width: 500px; border: 1px solid var(--border); }
+  @media (min-width: 500px) { .modal { border-radius: var(--radius); } }
+  .modal h3 { font-size: 18px; margin-bottom: 20px; color: var(--text); }
+  .modal-input { width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface2); color: var(--text); font-size: 15px; font-family: sans-serif; outline: none; margin-bottom: 14px; }
+  .emoji-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .emoji-opt { font-size: 24px; cursor: pointer; padding: 6px; border-radius: 8px; border: 2px solid transparent; }
+  .emoji-opt.sel { border-color: var(--accent); background: var(--accent-light); }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+  .coming-soon { text-align: center; padding: 60px 20px; }
+  .coming-soon-icon { font-size: 48px; margin-bottom: 16px; }
+  .coming-soon h3 { font-size: 18px; color: var(--text); margin-bottom: 8px; }
+  .coming-soon p { font-family: sans-serif; color: var(--text3); font-size: 14px; }
+
+  /* Staples tab styles */
+  .staples-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .staples-title { font-size: 22px; font-weight: 700; }
+  .staples-subtitle { font-family: sans-serif; font-size: 13px; color: var(--text3); margin-bottom: 20px; }
+  .staples-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+  .staple-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  .staple-row:last-child { border-bottom: none; }
+  .staple-row:hover { background: var(--surface2); }
+  .staple-section-badge { font-family: sans-serif; font-size: 11px; color: var(--text3); background: var(--surface2); border: 1px solid var(--border); padding: 2px 8px; border-radius: 10px; white-space: nowrap; flex-shrink: 0; }
+  .staple-name { flex: 1; font-family: sans-serif; font-size: 15px; color: var(--text); }
+  .add-staple-form { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .add-staple-input { flex: 1; min-width: 120px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 15px; font-family: sans-serif; outline: none; }
+  .add-staple-input:focus { border-color: var(--accent); }
+  .add-staple-select { padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 14px; font-family: sans-serif; outline: none; cursor: pointer; min-width: 120px; }
+  .add-staple-select:focus { border-color: var(--accent); }
+  .staples-empty { padding: 40px 20px; text-align: center; font-family: sans-serif; color: var(--text3); font-size: 14px; }
+
+  /* Add staples modal */
+  .staples-preview-list { max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 16px; }
+  .staples-preview-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); font-family: sans-serif; font-size: 14px; cursor: pointer; transition: background 0.15s; }
+  .staples-preview-row:last-child { border-bottom: none; }
+  .staples-preview-row:hover { background: var(--surface2); }
+  .staple-check { width: 20px; height: 20px; border: 2px solid var(--border); border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .staple-check.on { background: var(--accent); border-color: var(--accent); }
+  .staple-check.on::after { content: '✓'; color: white; font-size: 11px; }
+  .modal-note { font-family: sans-serif; font-size: 12px; color: var(--text3); margin-bottom: 12px; }
+  .staples-group-header { padding: 6px 14px 4px; font-family: sans-serif; font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.6px; background: var(--surface2); border-bottom: 1px solid var(--border); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+const { useState, useEffect, useRef, useCallback } = React;
+
+const USERS = {
+  petey: { name: 'Petey', emoji: '👨', pin: '1881' },
+  q:     { name: 'Q',     emoji: '👩', pin: '0713' }
+};
+const DEFAULT_SECTIONS = [
+  { id: 's1', name: 'General', emoji: '🛒', open: true },
+  { id: 's2', name: 'Produce', emoji: '🥦', open: true },
+  { id: 's3', name: 'Fridge',  emoji: '🧀', open: true },
+  { id: 's4', name: 'Meat',    emoji: '🥩', open: false },
+  { id: 's5', name: 'Freezer', emoji: '❄️', open: false },
+  { id: 's6', name: 'Snacks',  emoji: '🍿', open: false },
+];
+const DEFAULT_STAPLES = [
+  { id: 'st1',  name: 'Bananas',        sectionId: 's2' },
+  { id: 'st2',  name: 'Strawberries',   sectionId: 's2' },
+  { id: 'st3',  name: 'Blueberries',    sectionId: 's2' },
+  { id: 'st4',  name: 'Kale',           sectionId: 's2' },
+  { id: 'st5',  name: 'Peppers',        sectionId: 's2' },
+  { id: 'st6',  name: 'Bread',          sectionId: 's1' },
+  { id: 'st7',  name: 'Bagels',         sectionId: 's1' },
+  { id: 'st8',  name: 'Protein Shakes', sectionId: 's1' },
+  { id: 'st9',  name: 'Beer',           sectionId: 's1' },
+  { id: 'st10', name: 'Wine',           sectionId: 's1' },
+  { id: 'st11', name: 'Juice Boxes',    sectionId: 's1' },
+  { id: 'st12', name: 'Chicken',        sectionId: 's4' },
+  { id: 'st13', name: 'Ground Beef',    sectionId: 's4' },
+  { id: 'st14', name: 'Pork Loin',      sectionId: 's4' },
+  { id: 'st15', name: 'Dino Nuggets',   sectionId: 's5' },
+  { id: 'st16', name: 'Waffles',        sectionId: 's5' },
+  { id: 'st17', name: 'Bel Vitas',      sectionId: 's6' },
+  { id: 'st18', name: 'Popcorn',        sectionId: 's6' },
+];
+const SECTION_EMOJIS = ['🛒','🥦','🧀','🥩','❄️','🍿','🥐','🥛','🍎','🧴','🍷','☕','🧹','💊','🐾'];
+const TABS = [
+  { id: 'grocery',  label: '🛒 Groceries' },
+  { id: 'meals',    label: '🍽️ Meals' },
+  { id: 'tasks',    label: '✅ Tasks' },
+  { id: 'calendar', label: '📅 Calendar' },
+  { id: 'notes',    label: '📝 Notes' },
+  { id: 'staples',  label: '📋 Staples', hidden: true },
+];
+function genId() { return Math.random().toString(36).slice(2,9); }
+
+const Store = {
+  async get(key) {
+    if (window.storage) {
+      try { const r = await window.storage.get(key, true); return r ? JSON.parse(r.value) : null; } catch(e) { return null; }
+    }
+    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch(e) { return null; }
+  },
+  async set(key, val) {
+    if (window.storage) {
+      try { await window.storage.set(key, JSON.stringify(val), true); } catch(e) {}
+      return;
+    }
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
+  }
+};
+
+const S = {
+  btnPrimary: { display:'inline-flex', alignItems:'center', justifyContent:'center', gap:'6px', padding:'10px 18px', background:'#c85a2a', color:'#ffffff', border:'none', borderRadius:'8px', fontFamily:'sans-serif', fontSize:'14px', fontWeight:'600', cursor:'pointer', outline:'none', whiteSpace:'nowrap', WebkitAppearance:'none' },
+  btnPrimaryFull: { display:'block', width:'100%', padding:'14px', background:'#c85a2a', color:'#ffffff', border:'none', borderRadius:'8px', fontFamily:'sans-serif', fontSize:'16px', fontWeight:'600', cursor:'pointer', outline:'none', WebkitAppearance:'none' },
+  btnSecondary: { display:'inline-flex', alignItems:'center', justifyContent:'center', padding:'10px 18px', background:'#e8e4df', color:'#333333', border:'1px solid rgba(0,0,0,0.15)', borderRadius:'8px', fontFamily:'sans-serif', fontSize:'14px', cursor:'pointer', outline:'none', WebkitAppearance:'none' },
+  btnIcon: { display:'flex', alignItems:'center', justifyContent:'center', width:'36px', height:'36px', background:'#f0ede8', border:'1px solid rgba(0,0,0,0.15)', borderRadius:'8px', fontSize:'18px', cursor:'pointer', outline:'none', flexShrink:0, WebkitAppearance:'none' },
+  btnUserSel: (sel) => ({ padding:'14px 10px', border: sel ? '2px solid #c85a2a' : '2px solid rgba(0,0,0,0.12)', borderRadius:'8px', background: sel ? '#fdf0eb' : '#f0ede8', color: sel ? '#c85a2a' : '#1a1a1a', fontSize:'15px', fontFamily:'sans-serif', fontWeight: sel ? '600' : '400', cursor:'pointer', textAlign:'center', outline:'none', WebkitAppearance:'none' }),
+  btnSectionDel: { display:'flex', alignItems:'center', justifyContent:'center', width:'28px', height:'28px', background:'#f0ede8', border:'1px solid rgba(0,0,0,0.15)', borderRadius:'6px', fontSize:'14px', color:'#666', cursor:'pointer', fontFamily:'sans-serif', outline:'none', flexShrink:0, WebkitAppearance:'none' },
+  btnItemDel: { background:'none', border:'none', color:'#bbb', cursor:'pointer', fontSize:'20px', padding:'0 4px', lineHeight:'1', outline:'none', flexShrink:0, WebkitAppearance:'none' },
+  btnAddItem: { padding:'10px 18px', background:'#c85a2a', color:'#ffffff', border:'none', borderRadius:'8px', fontFamily:'sans-serif', fontSize:'15px', fontWeight:'600', cursor:'pointer', outline:'none', flexShrink:0, WebkitAppearance:'none' },
+  btnClear: { fontFamily:'sans-serif', fontSize:'12px', color:'#888', background:'#f0ede8', border:'1px solid rgba(0,0,0,0.12)', borderRadius:'4px', cursor:'pointer', padding:'3px 10px', outline:'none', WebkitAppearance:'none' },
+  btnStaples: { display:'inline-flex', alignItems:'center', justifyContent:'center', gap:'5px', padding:'10px 14px', background:'#f0ede8', color:'#c85a2a', border:'1px solid #d4845a', borderRadius:'8px', fontFamily:'sans-serif', fontSize:'13px', fontWeight:'600', cursor:'pointer', outline:'none', whiteSpace:'nowrap', WebkitAppearance:'none' },
+  btnStaplesLink: { background:'none', border:'none', fontFamily:'sans-serif', fontSize:'12px', color:'#888', cursor:'pointer', padding:'0', textDecoration:'underline', outline:'none', WebkitAppearance:'none' },
+};
+
+function App() {
+  const [user, setUser] = useState(null);
+  const [selUser, setSelUser] = useState(null);
+  const [pin, setPin] = useState('');
+  const [authErr, setAuthErr] = useState('');
+  const [theme, setTheme] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const [tab, setTab] = useState('grocery');
+  const [sections, setSections] = useState(DEFAULT_SECTIONS);
+  const [items, setItems] = useState({});
+  const [staples, setStaples] = useState(DEFAULT_STAPLES);
+  const [showAddSection, setShowAddSection] = useState(false);
+  const [showAddStaples, setShowAddStaples] = useState(false);
+  const [showClearAll, setShowClearAll] = useState(false);
+  const [newSection, setNewSection] = useState({ name: '', emoji: '🛒' });
+  const [syncStatus, setSyncStatus] = useState('idle');
+  const [syncTime, setSyncTime] = useState(null);
+
+  const lastSaveTs = useRef(0);
+  const isSaving = useRef(false);
+  const syncInterval = useRef(null);
+
+  useEffect(() => { document.documentElement.setAttribute('data-theme', theme); }, [theme]);
+
+  const saveData = useCallback(async (secs, its, stps) => {
+    isSaving.current = true;
+    setSyncStatus('saving');
+    const ts = Date.now();
+    lastSaveTs.current = ts;
+    await Store.set('grocery_data', { sections: secs, items: its, staples: stps, ts });
+    isSaving.current = false;
+    setSyncStatus('live');
+    setSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  }, []);
+
+  const loadData = useCallback(async () => {
+    if (isSaving.current) return;
+    const d = await Store.get('grocery_data');
+    if (!d || d.ts <= lastSaveTs.current) return;
+    setSections(d.sections || DEFAULT_SECTIONS);
+    setItems(d.items || {});
+    setStaples(d.staples || DEFAULT_STAPLES);
+    lastSaveTs.current = d.ts;
+    setSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    setSyncStatus('live');
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const d = await Store.get('grocery_data');
+      if (d) {
+        setSections(d.sections || DEFAULT_SECTIONS);
+        setItems(d.items || {});
+        setStaples(d.staples || DEFAULT_STAPLES);
+        lastSaveTs.current = d.ts || 0;
+        setSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      }
+      setSyncStatus('live');
+    })();
+    syncInterval.current = setInterval(loadData, 12000);
+    return () => clearInterval(syncInterval.current);
+  }, [user, loadData]);
+
+  function update(s, i, stps) {
+    const st = stps !== undefined ? stps : staples;
+    setSections(s); setItems(i); setStaples(st);
+    saveData(s, i, st);
+  }
+
+  function login() {
+    if (!selUser) { setAuthErr('Please select who you are.'); return; }
+    if (pin !== USERS[selUser].pin) { setAuthErr('Incorrect PIN. Try again.'); return; }
+    setUser({ id: selUser, ...USERS[selUser] });
+  }
+  function logout() { clearInterval(syncInterval.current); setUser(null); setSelUser(null); setPin(''); setAuthErr(''); setSyncStatus('idle'); }
+  function toggleSection(id) { update(sections.map(s => s.id===id ? {...s,open:!s.open} : s), items); }
+  function deleteSection(id) { const ni={...items}; delete ni[id]; update(sections.filter(s=>s.id!==id), ni); }
+  function addSection() {
+    if (!newSection.name.trim()) return;
+    update([...sections, { id: genId(), name: newSection.name.trim(), emoji: newSection.emoji, open: true }], items);
+    setShowAddSection(false); setNewSection({ name: '', emoji: '🛒' });
+  }
+  function addItem(sId, text) { if (!text.trim()) return; update(sections, { ...items, [sId]: [...(items[sId]||[]), { id: genId(), text: text.trim(), checked: false }] }); }
+  function toggleItem(sId, iId) { update(sections, { ...items, [sId]: (items[sId]||[]).map(i => i.id===iId ? {...i,checked:!i.checked} : i) }); }
+  function deleteItem(sId, iId) { update(sections, { ...items, [sId]: (items[sId]||[]).filter(i => i.id!==iId) }); }
+  function clearChecked(sId) { update(sections, { ...items, [sId]: (items[sId]||[]).filter(i => !i.checked) }); }
+  function clearAllItems() { update(sections, {}); }
+
+  // Staples management
+  function addStaple(name, sectionId) {
+    if (!name.trim()) return;
+    const newStaples = [...staples, { id: genId(), name: name.trim(), sectionId }];
+    update(sections, items, newStaples);
+  }
+  function deleteStaple(id) {
+    update(sections, items, staples.filter(s => s.id !== id));
+  }
+
+  // Add staples to grocery list — only staples whose item doesn't already exist (unchecked) in that section
+  function addStaplesToList(selectedIds) {
+    const selected = staples.filter(s => selectedIds.includes(s.id));
+    let newItems = { ...items };
+    selected.forEach(staple => {
+      const sectionItems = newItems[staple.sectionId] || [];
+      const alreadyExists = sectionItems.some(i => !i.checked && i.text.toLowerCase() === staple.name.toLowerCase());
+      if (!alreadyExists) {
+        newItems[staple.sectionId] = [...sectionItems, { id: genId(), text: staple.name, checked: false }];
+      }
+    });
+    update(sections, newItems);
+    setShowAddStaples(false);
+  }
+
+  if (!user) return React.createElement('div', { className:'auth-screen' },
+    React.createElement('div', { className:'auth-card' },
+      React.createElement('div', { className:'auth-logo' }, '🏠 Home'),
+      React.createElement('div', { className:'auth-sub' }, "Petey & Q's family hub"),
+      React.createElement('span', { className:'auth-label' }, 'Who are you?'),
+      React.createElement('div', { className:'user-grid' },
+        Object.entries(USERS).map(([k,u]) =>
+          React.createElement('button', { key:k, style:S.btnUserSel(selUser===k), onClick:()=>{ setSelUser(k); setAuthErr(''); setPin(''); } },
+            React.createElement('span', { style:{fontSize:'24px',display:'block',marginBottom:'4px'} }, u.emoji), u.name
+          )
+        )
+      ),
+      React.createElement('span', { className:'auth-label' }, 'PIN'),
+      React.createElement('input', { className:'auth-input', type:'password', inputMode:'numeric', placeholder:'••••', value:pin, maxLength:8, onChange:e=>{setPin(e.target.value);setAuthErr('');}, onKeyDown:e=>e.key==='Enter'&&login() }),
+      React.createElement('button', { style:S.btnPrimaryFull, onClick:login }, 'Sign In'),
+      authErr && React.createElement('div', { className:'auth-err' }, authErr)
+    )
+  );
+
+  const visibleTabs = TABS.filter(t => !t.hidden || t.id === tab);
+
+  return React.createElement('div', { className:'app' },
+    React.createElement('div', { className:'topbar' },
+      React.createElement('div', { className:'topbar-title' }, '🏠 Home'),
+      React.createElement('div', { className:'topbar-right' },
+        React.createElement('div', { className:'user-pill' }, `${user.emoji} ${user.name}`),
+        React.createElement('button', { style:S.btnIcon, onClick:()=>setTheme(t=>t==='light'?'dark':'light') }, theme==='light'?'🌙':'☀️'),
+        React.createElement('button', { style:S.btnIcon, onClick:logout }, '↩')
+      )
+    ),
+    React.createElement('div', { className:'tab-bar' },
+      visibleTabs.map(t => React.createElement('div', { key:t.id, className:`tab${tab===t.id?' active':''}`, onClick:()=>setTab(t.id) }, t.label))
+    ),
+    React.createElement('div', { className:'sync-bar' },
+      React.createElement('div', { className:`sync-dot ${syncStatus==='saving'?'saving':'live'}` }),
+      syncStatus==='saving' ? 'Saving…' : syncTime ? `Live · updated ${syncTime}` : 'Ready'
+    ),
+    React.createElement('div', { className:'content' },
+      tab==='grocery'
+        ? React.createElement(GroceryTab, {
+            sections, items, staples,
+            onToggleSection:toggleSection, onDeleteSection:deleteSection,
+            onAddSection:()=>setShowAddSection(true),
+            onAddItem:addItem, onToggleItem:toggleItem, onDeleteItem:deleteItem, onClearChecked:clearChecked,
+            onAddStaples:()=>setShowAddStaples(true),
+            onGoToStaples:()=>setTab('staples'),
+            onClearAll:()=>setShowClearAll(true),
+          })
+        : tab==='staples'
+          ? React.createElement(StaplesTab, {
+              sections, staples,
+              onAddStaple:addStaple, onDeleteStaple:deleteStaple,
+              onBack:()=>setTab('grocery'),
+            })
+          : React.createElement('div', { className:'coming-soon' },
+              React.createElement('div', { className:'coming-soon-icon' }, TABS.find(t=>t.id===tab)?.label.split(' ')[0]),
+              React.createElement('h3', null, TABS.find(t=>t.id===tab)?.label.replace(/^[^ ]+ /,'')),
+              React.createElement('p', null, 'Coming soon!')
+            )
+    ),
+    showAddSection && React.createElement('div', { className:'modal-overlay', onClick:e=>e.target.className==='modal-overlay'&&setShowAddSection(false) },
+      React.createElement('div', { className:'modal' },
+        React.createElement('h3', null, 'Add Section'),
+        React.createElement('input', { className:'modal-input', placeholder:'Section name', value:newSection.name, autoFocus:true, onChange:e=>setNewSection(s=>({...s,name:e.target.value})), onKeyDown:e=>e.key==='Enter'&&addSection() }),
+        React.createElement('div', { style:{fontFamily:'sans-serif',fontSize:12,color:'var(--text2)',marginBottom:8} }, 'Pick an icon:'),
+        React.createElement('div', { className:'emoji-grid' },
+          SECTION_EMOJIS.map(em => React.createElement('div', { key:em, className:`emoji-opt${newSection.emoji===em?' sel':''}`, onClick:()=>setNewSection(s=>({...s,emoji:em})) }, em))
+        ),
+        React.createElement('div', { className:'modal-actions' },
+          React.createElement('button', { style:S.btnSecondary, onClick:()=>setShowAddSection(false) }, 'Cancel'),
+          React.createElement('button', { style:S.btnPrimary, onClick:addSection }, 'Add Section')
+        )
+      )
+    ),
+    showAddStaples && React.createElement(AddStaplesModal, {
+      sections, items, staples,
+      onConfirm: addStaplesToList,
+      onClose: ()=>setShowAddStaples(false),
+    }),
+    showClearAll && React.createElement('div', { className:'modal-overlay', onClick:e=>e.target.className==='modal-overlay'&&setShowClearAll(false) },
+      React.createElement('div', { className:'modal' },
+        React.createElement('h3', null, '🗑️ Clear Entire List?'),
+        React.createElement('p', { style:{fontFamily:'sans-serif',fontSize:14,color:'var(--text2)',marginBottom:24,lineHeight:1.5} },
+          'This removes every item from every section and starts fresh. Your sections and staples are not affected.'
+        ),
+        React.createElement('div', { className:'modal-actions' },
+          React.createElement('button', { style:S.btnSecondary, onClick:()=>setShowClearAll(false) }, 'Cancel'),
+          React.createElement('button', { style:{...S.btnPrimary, background:'#c0392b'}, onClick:()=>{ clearAllItems(); setShowClearAll(false); } }, 'Yes, clear everything')
+        )
+      )
+    )
+  );
+}
+
+function AddStaplesModal({ sections, items, staples, onConfirm, onClose }) {
+  // Pre-select staples not already on the list (unchecked)
+  const initialSelected = staples
+    .filter(staple => {
+      const sectionItems = items[staple.sectionId] || [];
+      return !sectionItems.some(i => !i.checked && i.text.toLowerCase() === staple.name.toLowerCase());
+    })
+    .map(s => s.id);
+
+  const [selected, setSelected] = useState(initialSelected);
+
+  function toggle(id) {
+    setSelected(sel => sel.includes(id) ? sel.filter(s=>s!==id) : [...sel, id]);
+  }
+
+  // Group staples by section
+  const grouped = sections
+    .map(sec => ({ sec, stps: staples.filter(s => s.sectionId === sec.id) }))
+    .filter(g => g.stps.length > 0);
+
+  const allIds = staples.map(s => s.id);
+  const allSelected = allIds.every(id => selected.includes(id));
+
+  return React.createElement('div', { className:'modal-overlay', onClick:e=>e.target.className==='modal-overlay'&&onClose() },
+    React.createElement('div', { className:'modal' },
+      React.createElement('h3', null, '📋 Add Staples to List'),
+      staples.length === 0
+        ? React.createElement('div', { style:{fontFamily:'sans-serif',fontSize:14,color:'var(--text3)',textAlign:'center',padding:'24px 0',marginBottom:16} },
+            "No staples yet. Add some from the Staples tab first."
+          )
+        : React.createElement(React.Fragment, null,
+            React.createElement('div', { className:'modal-note' },
+              `${selected.length} of ${staples.length} selected — items already on your list are pre-deselected.`
+            ),
+            React.createElement('div', { style:{display:'flex',justifyContent:'flex-end',marginBottom:8} },
+              React.createElement('button', { style:S.btnClear, onClick:()=>setSelected(allSelected ? [] : allIds) },
+                allSelected ? 'Deselect all' : 'Select all'
+              )
+            ),
+            React.createElement('div', { className:'staples-preview-list' },
+              grouped.map(({ sec, stps }) =>
+                React.createElement(React.Fragment, { key:sec.id },
+                  React.createElement('div', { className:'staples-group-header' }, `${sec.emoji} ${sec.name}`),
+                  stps.map(staple => {
+                    const on = selected.includes(staple.id);
+                    const alreadyOnList = (items[staple.sectionId]||[]).some(i => !i.checked && i.text.toLowerCase() === staple.name.toLowerCase());
+                    return React.createElement('div', { key:staple.id, className:'staples-preview-row', onClick:()=>toggle(staple.id) },
+                      React.createElement('div', { className:`staple-check${on?' on':''}` }),
+                      React.createElement('span', { style:{flex:1} }, staple.name),
+                      alreadyOnList && React.createElement('span', { style:{fontFamily:'sans-serif',fontSize:11,color:'var(--text3)'} }, '✓ on list')
+                    );
+                  })
+                )
+              )
+            )
+          ),
+      React.createElement('div', { className:'modal-actions' },
+        React.createElement('button', { style:S.btnSecondary, onClick:onClose }, 'Cancel'),
+        React.createElement('button', { style:S.btnPrimary, onClick:()=>onConfirm(selected), disabled:selected.length===0 },
+          selected.length > 0 ? `Add ${selected.length} item${selected.length===1?'':'s'}` : 'Add to List'
+        )
+      )
+    )
+  );
+}
+
+function GroceryTab({ sections, items, staples, onToggleSection, onDeleteSection, onAddSection, onAddItem, onToggleItem, onDeleteItem, onClearChecked, onAddStaples, onGoToStaples, onClearAll }) {
+  return React.createElement('div', null,
+    React.createElement('div', { className:'grocery-header' },
+      React.createElement('div', { className:'grocery-title' }, 'Grocery List'),
+      React.createElement('div', { className:'grocery-actions' },
+        React.createElement('button', { style:S.btnStaples, onClick:onAddStaples }, '📋 Add Staples'),
+        React.createElement('button', { style:S.btnPrimary, onClick:onAddSection }, '＋ Section'),
+        React.createElement('button', { style:{...S.btnIcon, color:'#c0392b', fontSize:'16px'}, title:'Clear all items', onClick:onClearAll }, '🗑️')
+      )
+    ),
+    React.createElement('div', { style:{marginBottom:16,display:'flex',alignItems:'center',gap:6} },
+      React.createElement('span', { style:{fontFamily:'sans-serif',fontSize:12,color:'var(--text3)'} },
+        `${staples.length} staple${staples.length===1?'':'s'} saved ·`
+      ),
+      React.createElement('button', { style:S.btnStaplesLink, onClick:onGoToStaples }, 'Edit staples list')
+    ),
+    sections.map(s => React.createElement(SectionCard, {
+      key:s.id, section:s,
+      unchecked:(items[s.id]||[]).filter(i=>!i.checked),
+      checked:(items[s.id]||[]).filter(i=>i.checked),
+      canDelete: !staples.some(st => st.sectionId === s.id),
+      onToggle:()=>onToggleSection(s.id), onDelete:()=>onDeleteSection(s.id),
+      onAddItem:t=>onAddItem(s.id,t), onToggleItem:id=>onToggleItem(s.id,id),
+      onDeleteItem:id=>onDeleteItem(s.id,id), onClearChecked:()=>onClearChecked(s.id)
+    }))
+  );
+}
+
+function StaplesTab({ sections, staples, onAddStaple, onDeleteStaple, onBack }) {
+  const [name, setName] = useState('');
+  const [sectionId, setSectionId] = useState(sections[0]?.id || '');
+  const inputRef = useRef(null);
+
+  function submit() {
+    if (!name.trim() || !sectionId) return;
+    onAddStaple(name.trim(), sectionId);
+    setName('');
+    setTimeout(() => inputRef.current && inputRef.current.focus(), 0);
+  }
+
+  // Group by section
+  const grouped = sections
+    .map(sec => ({ sec, stps: staples.filter(s => s.sectionId === sec.id) }))
+    .filter(g => g.stps.length > 0);
+
+  return React.createElement('div', null,
+    React.createElement('div', { className:'staples-header' },
+      React.createElement('div', { className:'staples-title' }, '📋 Staples'),
+      React.createElement('button', { style:{...S.btnSecondary, fontSize:'13px', padding:'8px 14px'}, onClick:onBack }, '← Groceries')
+    ),
+    React.createElement('div', { className:'staples-subtitle' },
+      'Your regular items. Hit "Add Staples" on the grocery tab to drop them all onto your list in one tap.'
+    ),
+    staples.length === 0
+      ? React.createElement('div', { className:'staples-empty' },
+          React.createElement('div', { style:{fontSize:36,marginBottom:12} }, '📋'),
+          'No staples yet — add your regulars below.'
+        )
+      : React.createElement('div', { className:'staples-card', style:{marginBottom:20} },
+          grouped.map(({ sec, stps }) =>
+            React.createElement(React.Fragment, { key:sec.id },
+              React.createElement('div', { className:'staples-group-header', style:{fontSize:12,padding:'8px 16px'} },
+                `${sec.emoji} ${sec.name}`
+              ),
+              stps.map(staple =>
+                React.createElement('div', { key:staple.id, className:'staple-row' },
+                  React.createElement('div', { className:'staple-name' }, staple.name),
+                  React.createElement('div', { className:'staple-section-badge' },
+                    `${sec.emoji} ${sec.name}`
+                  ),
+                  React.createElement('button', { style:S.btnItemDel, onClick:()=>onDeleteStaple(staple.id) }, '×')
+                )
+              )
+            )
+          )
+        ),
+    React.createElement('div', { style:{fontFamily:'sans-serif',fontSize:12,fontWeight:600,color:'var(--text2)',textTransform:'uppercase',letterSpacing:'0.8px',marginBottom:10} },
+      'Add a staple'
+    ),
+    React.createElement('div', { className:'add-staple-form' },
+      React.createElement('input', {
+        ref: inputRef,
+        className:'add-staple-input',
+        placeholder:'Item name…',
+        value:name,
+        onChange:e=>setName(e.target.value),
+        onKeyDown:e=>e.key==='Enter'&&submit()
+      }),
+      React.createElement('select', {
+        className:'add-staple-select',
+        value:sectionId,
+        onChange:e=>setSectionId(e.target.value)
+      },
+        sections.map(sec =>
+          React.createElement('option', { key:sec.id, value:sec.id }, `${sec.emoji} ${sec.name}`)
+        )
+      ),
+      React.createElement('button', { style:S.btnPrimary, onClick:submit }, 'Add')
+    )
+  );
+}
+
+function SectionCard({ section, unchecked, checked, canDelete, onToggle, onDelete, onAddItem, onToggleItem, onDeleteItem, onClearChecked }) {
+  const [val, setVal] = useState('');
+  const inputRef = useRef(null);
+  const total = unchecked.length + checked.length;
+  function submit() { const t=val.trim(); if(!t) return; setVal(''); onAddItem(t); setTimeout(()=>inputRef.current&&inputRef.current.focus(),0); }
+  return React.createElement('div', { className:'section-card' },
+    React.createElement('div', { className:'section-header', onClick:onToggle },
+      React.createElement('div', { className:'section-emoji' }, section.emoji),
+      React.createElement('div', { className:'section-name' }, section.name),
+      total>0 && React.createElement('div', { className:'section-count' }, `${unchecked.length}/${total}`),
+      canDelete && React.createElement('button', { style:S.btnSectionDel, onClick:e=>{e.stopPropagation();onDelete();} }, '✕'),
+      React.createElement('div', { className:`section-toggle${section.open?' open':''}` }, '▾')
+    ),
+    section.open && React.createElement('div', { className:'section-body' },
+      unchecked.map(item => React.createElement('div', { key:item.id, className:'item-row' },
+        React.createElement('div', { className:'item-checkbox', onClick:()=>onToggleItem(item.id) }),
+        React.createElement('div', { className:'item-text' }, item.text),
+        React.createElement('button', { style:S.btnItemDel, onClick:()=>onDeleteItem(item.id) }, '×')
+      )),
+      checked.length>0 && React.createElement('div', { className:'checked-divider' },
+        React.createElement('span', null, `Checked (${checked.length})`),
+        React.createElement('button', { style:S.btnClear, onClick:onClearChecked }, 'Clear all')
+      ),
+      checked.map(item => React.createElement('div', { key:item.id, className:'item-row' },
+        React.createElement('div', { className:'item-checkbox checked', onClick:()=>onToggleItem(item.id) }),
+        React.createElement('div', { className:'item-text checked' }, item.text),
+        React.createElement('button', { style:S.btnItemDel, onClick:()=>onDeleteItem(item.id) }, '×')
+      )),
+      React.createElement('div', { className:'add-item-row' },
+        React.createElement('input', { ref:inputRef, className:'add-item-input', placeholder:'Add item…', value:val, onChange:e=>setVal(e.target.value), onKeyDown:e=>e.key==='Enter'&&submit() }),
+        React.createElement('button', { style:S.btnAddItem, onClick:submit }, 'Add')
+      )
+    )
+  );
+}
+
+ReactDOM.render(React.createElement(App), document.getElementById('root'));
+</script>
+</body>
+</html>

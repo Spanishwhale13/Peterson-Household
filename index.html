@@ -118,13 +118,10 @@
 <div id="root"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
 <script>
 const { useState, useEffect, useRef, useCallback } = React;
 
-const USERS = {
-  petey: { name: 'Petey', emoji: '👨', pin: '1881' },
-  q:     { name: 'Q',     emoji: '👩', pin: '0713' }
-};
 const DEFAULT_SECTIONS = [
   { id: 's1', name: 'General', emoji: '🛒', open: true },
   { id: 's2', name: 'Produce', emoji: '🥦', open: true },
@@ -162,6 +159,15 @@ const TABS = [
   { id: 'notes',    label: '📝 Notes' },
   { id: 'staples',  label: '📋 Staples', hidden: true },
 ];
+
+// Replace these values with your Supabase project info to enable live syncing across devices.
+const SUPABASE_URL = 'https://qfmvukwjjjeiblafuskm.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmbXZ1a3dqamplaWJsYWZ1c2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Mjc4MDksImV4cCI6MjA5NzQwMzgwOX0.pYaPH-o-aUDVoVcrf7-jJ9SXC7LSEZEKsGMeb7o4N_4';
+const SUPABASE_TABLE = 'grocery_state';
+const SUPABASE_ROW_ID = 'default';
+let supabaseClient = null;
+const useSupabase = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase);
+
 function genId() { return Math.random().toString(36).slice(2,9); }
 
 const Store = {
@@ -194,11 +200,64 @@ const S = {
   btnStaplesLink: { background:'none', border:'none', fontFamily:'sans-serif', fontSize:'12px', color:'#888', cursor:'pointer', padding:'0', textDecoration:'underline', outline:'none', WebkitAppearance:'none' },
 };
 
+console.log('Supabase config:', { 
+  SUPABASE_URL: SUPABASE_URL ? 'set' : 'empty',
+  SUPABASE_ANON_KEY: SUPABASE_ANON_KEY ? 'set' : 'empty',
+  useSupabase,
+  hasWindow_supabase: !!window.supabase
+});
+
+async function initSupabase() {
+  if (!useSupabase) return;
+  try {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    await subscribeSupabase();
+  } catch (error) {
+    console.warn('Supabase init failed', error);
+  }
+}
+
+async function fetchRemoteData() {
+  if (!supabaseClient) return null;
+  const { data, error } = await supabaseClient
+    .from(SUPABASE_TABLE)
+    .select('data')
+    .eq('id', SUPABASE_ROW_ID)
+    .single();
+  if (error && error.code !== 'PGRST116') {
+    console.warn('Supabase fetch error', error);
+  }
+  return data?.data || null;
+}
+
+async function saveRemoteData(state) {
+  if (!supabaseClient) return null;
+  const { error } = await supabaseClient
+    .from(SUPABASE_TABLE)
+    .upsert({ id: SUPABASE_ROW_ID, data: state }, { onConflict: 'id' });
+  if (error) {
+    console.warn('Supabase save error', error);
+  }
+  return !error;
+}
+
+async function subscribeSupabase() {
+  if (!supabaseClient) return;
+  const channel = supabaseClient.channel('grocery_state_channel');
+  channel.on('postgres_changes', { event: '*', schema: 'public', table: SUPABASE_TABLE, filter: `id=eq.${SUPABASE_ROW_ID}` }, (payload) => {
+    const remote = payload.new?.data;
+    if (!remote || remote.ts <= lastSaveTs.current) return;
+    lastSaveTs.current = remote.ts;
+    setSections(remote.sections || DEFAULT_SECTIONS);
+    setItems(remote.items || {});
+    setStaples(remote.staples || DEFAULT_STAPLES);
+    setSyncStatus('live');
+    setSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  });
+  await channel.subscribe();
+}
+
 function App() {
-  const [user, setUser] = useState(null);
-  const [selUser, setSelUser] = useState(null);
-  const [pin, setPin] = useState('');
-  const [authErr, setAuthErr] = useState('');
   const [theme, setTheme] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
   const [tab, setTab] = useState('grocery');
   const [sections, setSections] = useState(DEFAULT_SECTIONS);
@@ -222,7 +281,21 @@ function App() {
     setSyncStatus('saving');
     const ts = Date.now();
     lastSaveTs.current = ts;
-    await Store.set('grocery_data', { sections: secs, items: its, staples: stps, ts });
+    const payload = { sections: secs, items: its, staples: stps, ts };
+
+    if (useSupabase) {
+      console.log('Saving to Supabase...', payload);
+      try {
+        await saveRemoteData(payload);
+        console.log('Supabase save successful');
+      } catch (e) {
+        console.warn('Supabase save failed', e);
+      }
+    } else {
+      console.log('Supabase not enabled, saving locally only');
+    }
+
+    await Store.set('grocery_data', payload);
     isSaving.current = false;
     setSyncStatus('live');
     setSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
@@ -230,7 +303,20 @@ function App() {
 
   const loadData = useCallback(async () => {
     if (isSaving.current) return;
-    const d = await Store.get('grocery_data');
+    let d = null;
+
+    if (useSupabase) {
+      try {
+        d = await fetchRemoteData();
+      } catch (e) {
+        console.warn('Supabase load failed', e);
+      }
+    }
+
+    if (!d) {
+      d = await Store.get('grocery_data');
+    }
+
     if (!d || d.ts <= lastSaveTs.current) return;
     setSections(d.sections || DEFAULT_SECTIONS);
     setItems(d.items || {});
@@ -241,21 +327,14 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
     (async () => {
-      const d = await Store.get('grocery_data');
-      if (d) {
-        setSections(d.sections || DEFAULT_SECTIONS);
-        setItems(d.items || {});
-        setStaples(d.staples || DEFAULT_STAPLES);
-        lastSaveTs.current = d.ts || 0;
-        setSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      }
+      await initSupabase();
+      await loadData();
       setSyncStatus('live');
     })();
     syncInterval.current = setInterval(loadData, 12000);
     return () => clearInterval(syncInterval.current);
-  }, [user, loadData]);
+  }, [loadData]);
 
   function update(s, i, stps) {
     const st = stps !== undefined ? stps : staples;
@@ -263,12 +342,6 @@ function App() {
     saveData(s, i, st);
   }
 
-  function login() {
-    if (!selUser) { setAuthErr('Please select who you are.'); return; }
-    if (pin !== USERS[selUser].pin) { setAuthErr('Incorrect PIN. Try again.'); return; }
-    setUser({ id: selUser, ...USERS[selUser] });
-  }
-  function logout() { clearInterval(syncInterval.current); setUser(null); setSelUser(null); setPin(''); setAuthErr(''); setSyncStatus('idle'); }
   function toggleSection(id) { update(sections.map(s => s.id===id ? {...s,open:!s.open} : s), items); }
   function deleteSection(id) { const ni={...items}; delete ni[id]; update(sections.filter(s=>s.id!==id), ni); }
   function addSection() {
@@ -307,34 +380,13 @@ function App() {
     setShowAddStaples(false);
   }
 
-  if (!user) return React.createElement('div', { className:'auth-screen' },
-    React.createElement('div', { className:'auth-card' },
-      React.createElement('div', { className:'auth-logo' }, '🏠 Home'),
-      React.createElement('div', { className:'auth-sub' }, "Petey & Q's family hub"),
-      React.createElement('span', { className:'auth-label' }, 'Who are you?'),
-      React.createElement('div', { className:'user-grid' },
-        Object.entries(USERS).map(([k,u]) =>
-          React.createElement('button', { key:k, style:S.btnUserSel(selUser===k), onClick:()=>{ setSelUser(k); setAuthErr(''); setPin(''); } },
-            React.createElement('span', { style:{fontSize:'24px',display:'block',marginBottom:'4px'} }, u.emoji), u.name
-          )
-        )
-      ),
-      React.createElement('span', { className:'auth-label' }, 'PIN'),
-      React.createElement('input', { className:'auth-input', type:'password', inputMode:'numeric', placeholder:'••••', value:pin, maxLength:8, onChange:e=>{setPin(e.target.value);setAuthErr('');}, onKeyDown:e=>e.key==='Enter'&&login() }),
-      React.createElement('button', { style:S.btnPrimaryFull, onClick:login }, 'Sign In'),
-      authErr && React.createElement('div', { className:'auth-err' }, authErr)
-    )
-  );
-
   const visibleTabs = TABS.filter(t => !t.hidden || t.id === tab);
 
   return React.createElement('div', { className:'app' },
     React.createElement('div', { className:'topbar' },
       React.createElement('div', { className:'topbar-title' }, '🏠 Home'),
       React.createElement('div', { className:'topbar-right' },
-        React.createElement('div', { className:'user-pill' }, `${user.emoji} ${user.name}`),
-        React.createElement('button', { style:S.btnIcon, onClick:()=>setTheme(t=>t==='light'?'dark':'light') }, theme==='light'?'🌙':'☀️'),
-        React.createElement('button', { style:S.btnIcon, onClick:logout }, '↩')
+        React.createElement('button', { style:S.btnIcon, onClick:()=>setTheme(t=>t==='light'?'dark':'light') }, theme==='light'?'🌙':'☀️')
       )
     ),
     React.createElement('div', { className:'tab-bar' },
@@ -342,7 +394,11 @@ function App() {
     ),
     React.createElement('div', { className:'sync-bar' },
       React.createElement('div', { className:`sync-dot ${syncStatus==='saving'?'saving':'live'}` }),
-      syncStatus==='saving' ? 'Saving…' : syncTime ? `Live · updated ${syncTime}` : 'Ready'
+      syncStatus==='saving'
+        ? 'Saving…'
+        : syncTime
+          ? `Live${useSupabase ? '' : ' (local)'} · updated ${syncTime}`
+          : 'Ready'
     ),
     React.createElement('div', { className:'content' },
       tab==='grocery'
